@@ -2,7 +2,9 @@
 
 Use **three.js** to create 3d object rendered in browser
 
-guide: https://threejs.org/docs/#manual/en/introduction/Creating-a-scene
+guides: 
+https://threejs.org/docs/#manual/en/introduction/Creating-a-scene
+https://www.youtube.com/watch?v=98dwlKJVl4I
 
 setup:
 
