@@ -13,13 +13,3 @@ setup:
 3. install vite using `npm install --save-dev vite`
 4. from terminal run `npx vite`
 5. follow URL to view web app
-
-
-
-
-
-
-
-cfom
-
-
