@@ -39,20 +39,56 @@ void main() {
 }
 `;
 
+
+class particle {
+    constructor(color, size, pos_x, pos_y, pos_z, id) {
+        this.color = color; this.size = size; this.id = id;
+        this.pos_x = pos_x; this.pos_y = pos_y; this.pos_z = pos_z;
+    }
+    movement(direction) {
+        let movementamount = 10;
+        switch(direction) {
+            case "right":
+                this.pos_x += movementamount; break;
+            case "left":
+                this.pos_x -= movementamount; break;
+            case "up":
+                this.pos_y += movementamount; break;
+            case "down":
+                this.pos_y -= movementamount; break;
+            case "back":
+                this.pos_z -= movementamount; break;
+            case "forward":
+                this.pos_z += movementamount; break;
+            default:
+                break;
+        }
+        const obj = scene.getObjectByProperty(toString(this.id)); obj.geometry.dispose(); obj.material.dispose(); scene.remove(obj);
+        const geometry = new THREE.SphereGeometry(this.size, 32, 32);
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.x = pos_x;
+        sphere.position.y = pos_y;
+        sphere.position.z = pos_z;
+        scene.add(sphere);
+    }
+}
+
+
+
 function init(spheres) {
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 0, 30);
     camera.lookAt(0, 0, 0);
 
-    const renderer = new THREE.WebGLRenderer();
+    var renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
     const sphereMeshes = spheres.map((sphereData) => {
-        const [color, size] = sphereData;
+        const [color, size, pos_x, pos_y, pos_z, id] = [sphereData.color, sphereData.size, sphereData.pos_x, sphereData.pos_y, sphereData.pos_z, sphereData.id];
         const geometry = new THREE.SphereGeometry(size, 32, 32);
-        const material = new THREE.ShaderMaterial({
+        var material = new THREE.ShaderMaterial({
             vertexShader: vertexShader,
             fragmentShader: fragmentShader,
             uniforms: {
@@ -60,10 +96,11 @@ function init(spheres) {
             }
         });
         const sphere = new THREE.Mesh(geometry, material);
+        sphere.name = toString(id);
 
-        sphere.position.x = (Math.random() - 0.5) * 25;
-        sphere.position.y = (Math.random() - 0.5) * 25;
-        sphere.position.z = (Math.random() - 0.5) * 25;
+        sphere.position.x = pos_x;
+        sphere.position.y = pos_y;
+        sphere.position.z = pos_z;
         scene.add(sphere);
 
         return sphere;
@@ -95,13 +132,23 @@ function init(spheres) {
 
     animate();
 }
-
+var usedIds = []
+function rande() {
+    return ((Math.random() - 0.5) * 25);
+}
+function gennewId() {
+    let newint = Math.floor(Math.random() * 10000)
+    while (usedIds.includes(newint)) {
+        let newint = Math.floor(Math.random() * 10000)
+    }
+    usedIds.push(newint); return newint;
+}
 const spheres = [
-    [0xff69b4, 2],
-    [0x00ff00, 3],
-    [0x0000ff, 1.5],
-    [0xffff00, 2.5],
-    [0xff00ff, 1]
+    particle(0xff69b4, 2, rande(), rande(), rande(), gennewId()),
+    particle(0x00ff00, 3, rande(), rande(), rande(), gennewId()),
+    particle(0x0000ff, 1.5, rande(), rande(), rande(), gennewId()),
+    particle(0xffff00, 2.5, rande(), rande(), rande(), gennewId()),
+    particle(0xff00ff, 1, rande(), rande(), rande(), gennewId())
 ];
 init(spheres);
 
