@@ -38,15 +38,22 @@ void main() {
     gl_FragColor = vec4(diffuse + ambient, 1.0);
 }
 `;
-
-
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+var material = new THREE.ShaderMaterial({
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader,
+    uniforms: {
+        time: { value: 0 },
+    }
+});
 class particle {
     constructor(color, size, pos_x, pos_y, pos_z, id) {
         this.color = color; this.size = size; this.id = id;
         this.pos_x = pos_x; this.pos_y = pos_y; this.pos_z = pos_z;
     }
     movement(direction) {
-        let movementamount = 10;
+        let movementamount = 3;
         switch(direction) {
             case "right":
                 this.pos_x += movementamount; break;
@@ -63,21 +70,16 @@ class particle {
             default:
                 break;
         }
-        const obj = scene.getObjectByProperty(toString(this.id)); obj.geometry.dispose(); obj.material.dispose(); scene.remove(obj);
         const geometry = new THREE.SphereGeometry(this.size, 32, 32);
-        const sphere = new THREE.Mesh(geometry, material);
-        sphere.position.x = pos_x;
-        sphere.position.y = pos_y;
-        sphere.position.z = pos_z;
-        scene.add(sphere);
+        let obj = scene.getObjectByName(toString(this.id)); 
+        obj.position.set(this.pos_x, this.pos_y, this.pos_z); console.log(obj.position)
+        obj.needsUpdate = true;
+        console.log(spheres); 
     }
 }
 
-
-
 function init(spheres) {
-    var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
     camera.position.set(0, 0, 30);
     camera.lookAt(0, 0, 0);
 
@@ -88,13 +90,6 @@ function init(spheres) {
     const sphereMeshes = spheres.map((sphereData) => {
         const [color, size, pos_x, pos_y, pos_z, id] = [sphereData.color, sphereData.size, sphereData.pos_x, sphereData.pos_y, sphereData.pos_z, sphereData.id];
         const geometry = new THREE.SphereGeometry(size, 32, 32);
-        var material = new THREE.ShaderMaterial({
-            vertexShader: vertexShader,
-            fragmentShader: fragmentShader,
-            uniforms: {
-                time: { value: 0 },
-            }
-        });
         const sphere = new THREE.Mesh(geometry, material);
         sphere.name = toString(id);
 
@@ -143,7 +138,7 @@ function gennewId() {
     }
     usedIds.push(newint); return newint;
 }
-const spheres = [
+var spheres = [
     new particle(0xff69b4, 2, rande(), rande(), rande(), gennewId()),
     new particle(0x00ff00, 3, rande(), rande(), rande(), gennewId()),
     new particle(0x0000ff, 1.5, rande(), rande(), rande(), gennewId()),
@@ -152,3 +147,4 @@ const spheres = [
 ];
 init(spheres);
 
+//setInterval(function () {spheres[0].movement("right");}, 3000)
