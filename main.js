@@ -1,3 +1,5 @@
+document.getElementById("modal").classList.add("hidden");
+
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
@@ -47,6 +49,7 @@ var material = new THREE.ShaderMaterial({
         time: { value: 0 },
     }
 });
+//const manager = new THREE.LoadingManager();
 class particle {
     constructor(color, size, pos_x, pos_y, pos_z, id) {
         this.color = color; this.size = size; this.id = id;
@@ -159,13 +162,31 @@ var spheres = [
 
 
 function addNewSphere() {
-    const [pos_x, pos_y, pos_z] = prompt("positions").split(' ');
-    const obj = new particle(0xff69b4, parseFloat(prompt("size")), parseInt(pos_x), parseInt(pos_y), parseInt(pos_z), gennewId())
-    spheres.push(obj);
-    obj.updateParticle();
+    document.getElementById("modal").classList.remove("hidden"); 
+    $(document).ready(function() {
+        $("#submitbtn").on("click", function (event) {
+            event.preventDefault();
+            const formData = {
+                pos_x: parseInt($("#n1").val()),
+                pos_y: parseInt($("#n2").val()),
+                pos_z: parseInt($("#n3").val()),
+                size: parseFloat($("#size").val()),
+                color: $("#choosecolor").val(),
+            };
+            console.log(formData)
+            const obj = new particle(formData["color"], formData["size"], formData["pos_x"], formData["pos_y"], formData["pos_z"], gennewId());
+            spheres.push(obj);
+            obj.updateParticle();
+            document.getElementById("modal").classList.add("hidden");
+        })
+    })
+    //const [pos_x, pos_y, pos_z] = prompt("positions").split(' ');
+    //const obj = new particle(0xff69b4, parseFloat(prompt("size")), parseInt(pos_x), parseInt(pos_y), parseInt(pos_z), gennewId())
+    //spheres.push(obj);
+    //obj.updateParticle();
 }
 
 init(spheres);
 
-addNewSphere();
+window.onload = function() {addNewSphere();};
 //setInterval(function () {spheres[0].movement("right");}, 3000)
