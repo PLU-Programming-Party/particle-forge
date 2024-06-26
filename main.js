@@ -178,6 +178,7 @@ function addNewSphere() {
             spheres.push(obj);
             obj.updateParticle();
             document.getElementById("modal").classList.add("hidden");
+            $('#question-form').each(function(){this.reset();});
         })
     })
     //const [pos_x, pos_y, pos_z] = prompt("positions").split(' ');
@@ -190,3 +191,9 @@ init(spheres);
 
 window.onload = function() {addNewSphere();};
 //setInterval(function () {spheres[0].movement("right");}, 3000)
+
+document.addEventListener("keydown", function(event) {
+    if (event.key == '.') {
+        addNewSphere();
+    }
+})
