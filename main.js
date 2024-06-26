@@ -144,11 +144,11 @@ function gennewId() {
     usedIds.push(newint); return newint;
 }
 const spheres = [
-    particle(0xff69b4, 2, rande(), rande(), rande(), gennewId()),
-    particle(0x00ff00, 3, rande(), rande(), rande(), gennewId()),
-    particle(0x0000ff, 1.5, rande(), rande(), rande(), gennewId()),
-    particle(0xffff00, 2.5, rande(), rande(), rande(), gennewId()),
-    particle(0xff00ff, 1, rande(), rande(), rande(), gennewId())
+    new particle(0xff69b4, 2, rande(), rande(), rande(), gennewId()),
+    new particle(0x00ff00, 3, rande(), rande(), rande(), gennewId()),
+    new particle(0x0000ff, 1.5, rande(), rande(), rande(), gennewId()),
+    new particle(0xffff00, 2.5, rande(), rande(), rande(), gennewId()),
+    new particle(0xff00ff, 1, rande(), rande(), rande(), gennewId())
 ];
 init(spheres);
 
