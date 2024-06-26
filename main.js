@@ -76,6 +76,17 @@ class particle {
         obj.needsUpdate = true;
         console.log(spheres); 
     }
+    updateParticle() {
+        const [color, size, pos_x, pos_y, pos_z, id] = [this.color, this.size, this.pos_x, this.pos_y, this.pos_z, this.id];
+        const geometry = new THREE.SphereGeometry(size, 32, 32);
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.name = toString(id);
+        sphere.position.x = pos_x;
+        sphere.position.y = pos_y;
+        sphere.position.z = pos_z;
+        scene.add(sphere);
+        console.log(scene)
+    }
 }
 
 function init(spheres) {
@@ -145,6 +156,16 @@ var spheres = [
     new particle(0xffff00, 2.5, rande(), rande(), rande(), gennewId()),
     new particle(0xff00ff, 1, rande(), rande(), rande(), gennewId())
 ];
+
+
+function addNewSphere() {
+    const [pos_x, pos_y, pos_z] = prompt("positions").split(' ');
+    const obj = new particle(0xff69b4, parseFloat(prompt("size")), parseInt(pos_x), parseInt(pos_y), parseInt(pos_z), gennewId())
+    spheres.push(obj);
+    obj.updateParticle();
+}
+
 init(spheres);
 
+addNewSphere();
 //setInterval(function () {spheres[0].movement("right");}, 3000)
