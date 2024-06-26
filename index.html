@@ -10,35 +10,43 @@
 <body>
 <script type="module" src="/main.js"></script>
 <div id= "modal">
-    <div id = "modal-content" style="text-align: center">
-        <h1 id = "modal-text">Create a new sphere</h1>
-        <form action = "#" id="question-form">
-                <div class="row">
-                    <label for="readonlystatic" class="col-form-label">Position of the sphere x, y, z</label>
+    <div id = "modal-content" >
+        <h1 id = "modal-text">Create a new sphere</h1><br><br>
+        <form action = "#" id="question-form" class = "row g-3">
+                <div class="row" style="text-align: center">
+                    <label for="readonlystatic" class="col-form-label">Position of the sphere x, y, z:</label>
                     <input type="text" readonly class="form-control-plaintext" id="readonlystatic" value="">
                 </div>
                 <div class="row">
                     <div class="col">
-                        <label for="posx" class="col-form-label">x: </label>
+                        <label for="posx" class="col-form-label">x </label>
                         <input type="number" id="n1" name="n1" min="-50" max="50" placeholder = "3" class = "form-control" required>
                     </div>
                     <div class="col">
-                        <label for="posy" class="col-form-label">y: </label>
+                        <label for="posy" class="col-form-label">y </label>
                         <input type="number" id="n2" name="n2" min="-50" max="50" placeholder = "3" class = "form-control" required>
                     </div>
                     <div class="col">
-                        <label for="posz" class="col-form-label">z: </label>
+                        <label for="posz" class="col-form-label">z </label>
                         <input type="number" id="n3" name="n3" min="-50" max="50" placeholder = "3" class = "form-control" required>
                     </div>
                 </div>
+            <div><h1></h1></div>
+            <div><h1></h1></div>
             <div class="row">
-                <label for="size" class="col-form-label">Size: </label>
+                <label for="size" class="col-form-label">Size </label>
                 <input type="number" id="size" name="size" min="0.1" max="15" step="0.1" placeholder = "2.5" class = "form-control" required>
             </div>
+            <div><h1></h1></div>
+            <div><h1></h1></div>
             <div class="row">
-                <label for="color">Ball color: </label>
-                <input type = "color" name = "color" value = "#000000" id = "choosecolor" required>
+                <span>
+                    <label for="color" class="col-form-label">Ball color: </label>
+                    <input type = "color" name = "color" value = "#000000" id = "choosecolor" style="width: 50%;" class = "form-control form-control-color" required>
+                </span>
             </div>
+            <div><h1></h1></div>
+            <div><h1></h1></div>
             <button type="submit" class = "btn btn-primary" id="submitbtn">Create</button>
         </form>
     </div>

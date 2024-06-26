@@ -12,7 +12,6 @@ body {
     overflow: auto; /* Enable scroll if needed */
     background-color: rgb(0,0,0); /* Fallback color */
     background-color: rgba(0,0,0,0.8); /* Black w/ opacity */
-    border-radius: 25px;
 }
 #modal-content {
     background-color: #fefefe;
@@ -23,7 +22,11 @@ body {
     padding: 20px;
     border: 1px solid #888;
     width: 80%; /* Could be more or less, depending on screen size */
+    border-radius: 35px;
 }
 .hidden {
     display: none !important;
+}
+#modal-text {
+    text-align: center;
 }
