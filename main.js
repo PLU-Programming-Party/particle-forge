@@ -2,7 +2,6 @@ document.getElementById("modal").classList.add("hidden");
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import particle from './particle.js';
 
 // Vertex shader code
 const vertexShader = `
