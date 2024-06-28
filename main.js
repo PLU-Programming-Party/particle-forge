@@ -2,7 +2,7 @@ document.getElementById("modal").classList.add("hidden");
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import particle from 'particle.js';
+import particle from './particle.js';
 
 // Vertex shader code
 const vertexShader = `
@@ -41,6 +41,9 @@ void main() {
     gl_FragColor = vec4(diffuse + ambient, 1.0);
 }
 `;
+
+let raycaster;
+let mouse = new THREE.Vector2();
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 var material = new THREE.ShaderMaterial({
@@ -50,6 +53,47 @@ var material = new THREE.ShaderMaterial({
         time: { value: 0 },
     }
 });
+class particle {
+    constructor(color, size, pos_x, pos_y, pos_z, id) {
+        this.color = color; this.size = size; this.id = id;
+        this.pos_x = pos_x; this.pos_y = pos_y; this.pos_z = pos_z;
+    }
+    movement(direction) {
+        let movementamount = 3;
+        switch(direction) {
+            case "right":
+                this.pos_x += movementamount; break;
+            case "left":
+                this.pos_x -= movementamount; break;
+            case "up":
+                this.pos_y += movementamount; break;
+            case "down":
+                this.pos_y -= movementamount; break;
+            case "back":
+                this.pos_z -= movementamount; break;
+            case "forward":
+                this.pos_z += movementamount; break;
+            default:
+                break;
+        }
+        const geometry = new THREE.SphereGeometry(this.size, 32, 32);
+        let obj = scene.getObjectByName(toString(this.id)); 
+        obj.position.set(this.pos_x, this.pos_y, this.pos_z); console.log(obj.position)
+        obj.needsUpdate = true;
+        console.log(spheres); 
+    }
+    updateParticle() {
+        const [color, size, pos_x, pos_y, pos_z, id] = [this.color, this.size, this.pos_x, this.pos_y, this.pos_z, this.id];
+        const geometry = new THREE.SphereGeometry(size, 32, 32);
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.name = toString(id);
+        sphere.position.x = pos_x;
+        sphere.position.y = pos_y;
+        sphere.position.z = pos_z;
+        scene.add(sphere);
+        console.log(scene)
+    }
+}
 //const manager = new THREE.LoadingManager();
 
 function init(spheres) {
@@ -74,7 +118,7 @@ function init(spheres) {
 
         return sphere;
     });
-
+    raycaster = new THREE.Raycaster();
     const orbit = new OrbitControls(camera, renderer.domElement);
     orbit.target.set(0, 0, 0);
     orbit.update();
@@ -85,7 +129,41 @@ function init(spheres) {
         renderer.setSize(window.innerWidth, window.innerHeight);
     };
     window.addEventListener("resize", onWindowResize);
+    function onMouseHover(event) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children);
+
+        for (let i = 0; i < intersects.length; i++) {
+            const object = intersects[i].object;
+            if (object instanceof THREE.Points) { 
+                console.log("Clicked Sphere ID:", object.userData.id);
+            }
+        }
+    }
+
+    //window.addEventListener("mousemove", onMouseHover);
+
+
+    // this function logs the id of a sphere when it is CLICKED
+    function onMouseDown(event) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children);
+
+        for (let i = 0; i < intersects.length; i++) {
+            const object = intersects[i].object;
+            if (object instanceof THREE.Points && object.userData && object.userData.id !== undefined) {
+                console.log("Clicked Sphere ID:", object.userData.id);
+            }
+        }
+    }
+
+    window.addEventListener("mousedown", onMouseDown);
     let clock = new THREE.Clock();
 
     function animate() {
