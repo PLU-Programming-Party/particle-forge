@@ -1,4 +1,5 @@
 document.getElementById("modal").classList.add("hidden");
+var modalopen = false;
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -53,9 +54,32 @@ var material = new THREE.ShaderMaterial({
     }
 });
 class particle {
-    constructor(color, size, pos_x, pos_y, pos_z, id) {
-        this.color = color; this.size = size; this.id = id;
+    static sphereCount = 0;
+    static selectedid = null;
+    constructor(color, size, pos_x, pos_y, pos_z) {
+        this.color = color; this.size = size; this.id = particle.sphereCount++;
         this.pos_x = pos_x; this.pos_y = pos_y; this.pos_z = pos_z;
+        this.geometry = new THREE.SphereGeometry(size, 32, 32);
+        this.material = new THREE.PointsMaterial({
+            color: color,
+            size: 0.1,
+        });
+        //this.material = material;
+        this.sphereObject = new THREE.Points(this.geometry, this.material);
+        this.sphereObject.userData.id = this.id;
+        this.sphereObject.userData.paused = true;
+        this.sphereObject.name = this.id.toString();
+        this.interval = setInterval(() => this.rotation(), 50)
+        this.sphereObject.userData.pauser = () => {this.sphereObject.userData.paused = true;}
+    }
+    rotation() {
+        if (!this.sphereObject.userData.paused) {
+            this.sphereObject.rotation.x += 0.1;
+        }
+    }
+    getSphereObject() {return this.sphereObject;}
+    setPosition(xpos, ypos, zpos) {
+        this.sphereObject.position.set(xpos, ypos, zpos);
     }
     movement(direction) {
         let movementamount = 3;
@@ -75,22 +99,16 @@ class particle {
             default:
                 break;
         }
-        const geometry = new THREE.SphereGeometry(this.size, 32, 32);
-        let obj = scene.getObjectByName(toString(this.id)); 
-        obj.position.set(this.pos_x, this.pos_y, this.pos_z); console.log(obj.position)
+        this.setPosition(this.pos_x, this.pos_y, this.pos_z);
+        let obj = scene.getObjectByName(this.id.toString()); 
         obj.needsUpdate = true;
         console.log(spheres); 
     }
     updateParticle() {
         const [color, size, pos_x, pos_y, pos_z, id] = [this.color, this.size, this.pos_x, this.pos_y, this.pos_z, this.id];
-        const geometry = new THREE.SphereGeometry(size, 32, 32);
-        const sphere = new THREE.Mesh(geometry, material);
-        sphere.name = toString(id);
-        sphere.position.x = pos_x;
-        sphere.position.y = pos_y;
-        sphere.position.z = pos_z;
-        scene.add(sphere);
-        console.log(scene)
+        this.sphereObject.name = id.toString();
+        this.setPosition(pos_x, pos_y, pos_z);
+        scene.add(this.getSphereObject());
     }
 }
 //const manager = new THREE.LoadingManager();
@@ -104,17 +122,10 @@ function init(spheres) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const sphereMeshes = spheres.map((sphereData) => {
-        const [color, size, pos_x, pos_y, pos_z, id] = [sphereData.color, sphereData.size, sphereData.pos_x, sphereData.pos_y, sphereData.pos_z, sphereData.id];
-        const geometry = new THREE.SphereGeometry(size, 32, 32);
-        const sphere = new THREE.Mesh(geometry, material);
-        sphere.name = toString(id);
-
-        sphere.position.x = pos_x;
-        sphere.position.y = pos_y;
-        sphere.position.z = pos_z;
-        scene.add(sphere);
-
+    const sphereMeshes = spheres.map((sphere) => {
+        sphere.setPosition(sphere.pos_x, sphere.pos_y, sphere.pos_z);
+        sphere.sphereObject.name = sphere.id.toString();
+        scene.add(sphere.getSphereObject());
         return sphere;
     });
     raycaster = new THREE.Raycaster();
@@ -128,7 +139,7 @@ function init(spheres) {
         renderer.setSize(window.innerWidth, window.innerHeight);
     };
     window.addEventListener("resize", onWindowResize);
-    function onMouseHover(event) {
+    /*function onMouseHover(event) {
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -141,23 +152,40 @@ function init(spheres) {
                 console.log("Clicked Sphere ID:", object.userData.id);
             }
         }
-    }
+    }*/
 
     //window.addEventListener("mousemove", onMouseHover);
 
 
     // this function logs the id of a sphere when it is CLICKED
     function onMouseDown(event) {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        if (!modalopen) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(scene.children);
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            let found = false;
+            for (let i = 0; i < intersects.length; i++) {
+                const object = intersects[i].object;
+                if (object instanceof THREE.Points && object.userData && object.userData.id !== undefined) {
+                    console.log("Clicked Sphere ID:", object.userData.id); found = true;
+                    let obj2 = 3;
+                    if (particle.selectedid != null) {
+                        obj2 = scene.getObjectByName(particle.selectedid.toString());
+                        obj2.userData.pauser();
+                    }
+                    particle.selectedid = object.userData.id;
+                    //console.log(scene.children)
+                    object.userData.paused = false;
+                    
 
-        for (let i = 0; i < intersects.length; i++) {
-            const object = intersects[i].object;
-            if (object instanceof THREE.Points && object.userData && object.userData.id !== undefined) {
-                console.log("Clicked Sphere ID:", object.userData.id);
+                    break;
+                }
+            }
+            if (!found) {
+                let obj2 = scene.getObjectByName(particle.selectedid.toString());
+                obj2.userData.pauser();
             }
         }
     }
@@ -168,10 +196,10 @@ function init(spheres) {
     function animate() {
         requestAnimationFrame(animate);
 
-        const elapsedTime = clock.getElapsedTime();
+        /*const elapsedTime = clock.getElapsedTime();
         sphereMeshes.forEach((sphere) => {
             sphere.material.uniforms.time.value = elapsedTime;
-        });
+        });*/
 
         renderer.render(scene, camera);
     }
@@ -182,23 +210,17 @@ var usedIds = []
 function rande() {
     return ((Math.random() - 0.5) * 25);
 }
-function gennewId() {
-    let newint = Math.floor(Math.random() * 10000)
-    while (usedIds.includes(newint)) {
-        let newint = Math.floor(Math.random() * 10000)
-    }
-    usedIds.push(newint); return newint;
-}
 var spheres = [
-    new particle(0xff69b4, 2, rande(), rande(), rande(), gennewId()),
-    new particle(0x00ff00, 3, rande(), rande(), rande(), gennewId()),
-    new particle(0x0000ff, 1.5, rande(), rande(), rande(), gennewId()),
-    new particle(0xffff00, 2.5, rande(), rande(), rande(), gennewId()),
-    new particle(0xff00ff, 1, rande(), rande(), rande(), gennewId())
+    new particle(0xff69b4, 2, rande(), rande(), rande()),
+    new particle(0x00ff00, 3, rande(), rande(), rande()),
+    new particle(0x0000ff, 1.5, rande(), rande(), rande()),
+    new particle(0xffff00, 2.5, rande(), rande(), rande()),
+    new particle(0xff00ff, 1, rande(), rande(), rande())
 ];
 
 
 function addNewSphere() {
+    modalopen = true;
     document.getElementById("modal").classList.remove("hidden"); 
     $(document).ready(function() {
         $("#submitbtn").on("click", function (event) {
@@ -210,11 +232,12 @@ function addNewSphere() {
                 size: parseFloat($("#size").val()),
                 color: $("#choosecolor").val(),
             };
-            console.log(formData)
-            const obj = new particle(formData["color"], formData["size"], formData["pos_x"], formData["pos_y"], formData["pos_z"], gennewId());
+        
+            const obj = new particle(formData["color"], formData["size"], formData["pos_x"], formData["pos_y"], formData["pos_z"]);
             spheres.push(obj);
             obj.updateParticle();
             document.getElementById("modal").classList.add("hidden");
+            modalopen = false;
             $('#question-form').each(function(){this.reset();});
         })
     })
