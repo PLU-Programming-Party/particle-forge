@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "three": "^0.165.0"
+    "three": "^0.165.0",
+    "vite-plugin-top-level-await": "^1.4.3"
   },
   "devDependencies": {
     "vite": "^5.3.0"
