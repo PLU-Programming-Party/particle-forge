@@ -1,119 +1,53 @@
 import { loadShader } from './src/utility/shaderLoader';
-import { Sphere } from './src/geometry/simple-geometry';
+import { Sphere, Cube, Plane, Cylinder, Cone } from './src/geometry/simple-geometry';
+import { Engine, SceneManager } from './src/engine/engine';
 
-// Check if WebGPU is supported
-if (!navigator.gpu) {
-    console.error('WebGPU is not supported');
-} else {
-    console.log('WebGPU is supported');
-}
-
-// Request adapter and device
-const adapter = await navigator.gpu.requestAdapter();
-if (!adapter) {
-    console.error('No adapter found');
-}
-const device = await adapter.requestDevice();
-
-// Create a canvas and context
+// Create a canvas
 const canvas = document.querySelector('canvas');
-const context = canvas.getContext('webgpu');
-const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-    device,
-    format: canvasFormat
-});
 
-// Resize canvas function
+// Create an engine
+const engine = new Engine(canvas);
+
+// Initialize the engine
+await engine.initialize();
+
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    context.configure({
-        device,
-        format: canvasFormat,
+    engine.context.configure({
+        device: engine.device,
+        format: engine.canvasFormat,
         size: { width: canvas.width, height: canvas.height }
     });
     render();
 }
 
-// load shaders
 const vertexShaderCode = await loadShader('./src/shaders/vert.wgsl');
 const fragmentShaderCode = await loadShader('./src/shaders/frag.wgsl');
+engine.initPipeline(vertexShaderCode, fragmentShaderCode);
 
-const vertexShaderModule = device.createShaderModule({ code: vertexShaderCode });
-const fragmentShaderModule = device.createShaderModule({ code: fragmentShaderCode });
+//Create buffers for sphere
+const sphere = Sphere(0.5, 32, 32);
+const sphereBuffers = engine.bufferGeometry(sphere);
 
-// vertex data for a single triangle
-const vertices = new Float32Array([
-    0.0, 0.5, 0.0,
-    -0.5, -0.5, 0.0,
-    0.5, -0.5, 0.0
-]);
+//Create buffers for cube
+const cube = Cube(1);
+const cubeBuffers = engine.bufferGeometry(cube);
 
-// create a vertex buffer
-const vertexBuffer = device.createBuffer({
-    size: vertices.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-});
-device.queue.writeBuffer(vertexBuffer, 0, vertices);
-
-// Create pipeline layout
-const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: []
-});
-
-// Create pipeline
-const pipeline = device.createRenderPipeline({
-    layout: pipelineLayout,
-    vertex: {
-        module: vertexShaderModule,
-        entryPoint: 'main',
-        buffers: [{
-            arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
-            attributes: [{
-                shaderLocation: 0,
-                offset: 0,
-                format: 'float32x3'
-            }]
-        }]
-    },
-    fragment: {
-        module: fragmentShaderModule,
-        entryPoint: 'main',
-        targets: [{
-            format: canvasFormat
-        }]
-    },
-    primitive: {
-        topology: 'triangle-list'
-    }
-})
-
-// Render function
+// Render
 function render() {
-    // Create a command encoder
-    const encoder = device.createCommandEncoder();
+    const renderPass = engine.startRenderPass();
 
-    const pass = encoder.beginRenderPass({
-        colorAttachments: [{
-        view: context.getCurrentTexture().createView(),
-        loadOp: "clear",
-        clearValue: { r: 0.2, g: 0.2, b: 0.2, a: 1.0 },
-        storeOp: "store",
-        }]
-    });
+    renderPass.pass.setVertexBuffer(0, cubeBuffers.vertexBuffer);
+    renderPass.pass.setIndexBuffer(cubeBuffers.indexBuffer, 'uint16');
+    renderPass.pass.drawIndexed(cube.indices.length, 1, 0, 0, 0);
 
-    // Set the pipeline
-    pass.setPipeline(pipeline);
-    pass.setVertexBuffer(0, vertexBuffer);
+    renderPass.pass.setVertexBuffer(0, sphereBuffers.vertexBuffer);
+    renderPass.pass.setIndexBuffer(sphereBuffers.indexBuffer, 'uint16');
+    renderPass.pass.drawIndexed(sphere.indices.length, 1, 0, 0, 0);
 
-    pass.draw(3, 1, 0, 0);
-
-    // Finish the pass
-    pass.end();
-    device.queue.submit([encoder.finish()]);
+    engine.endRenderPass(renderPass);
 }
 
-// Always fill the window with the canvas
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
