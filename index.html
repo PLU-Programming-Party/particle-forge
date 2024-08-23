@@ -1,55 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>My first three.js app</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Forge</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<script type="module" src="/main.js"></script>
-<div id= "modal">
-    <div id = "modal-content" >
-        <h1 id = "modal-text">Create a new sphere</h1><br><br>
-        <form action = "#" id="question-form" class = "row g-3">
-                <div class="row" style="text-align: center">
-                    <label for="readonlystatic" class="col-form-label">Position of the sphere x, y, z:</label>
-                    <input type="text" readonly class="form-control-plaintext" id="readonlystatic" value="">
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <label for="posx" class="col-form-label">x </label>
-                        <input type="number" id="n1" name="n1" min="-50" max="50" placeholder = "3" class = "form-control" required>
-                    </div>
-                    <div class="col">
-                        <label for="posy" class="col-form-label">y </label>
-                        <input type="number" id="n2" name="n2" min="-50" max="50" placeholder = "3" class = "form-control" required>
-                    </div>
-                    <div class="col">
-                        <label for="posz" class="col-form-label">z </label>
-                        <input type="number" id="n3" name="n3" min="-50" max="50" placeholder = "3" class = "form-control" required>
-                    </div>
-                </div>
-            <div><h1></h1></div>
-            <div><h1></h1></div>
-            <div class="row">
-                <label for="size" class="col-form-label">Size </label>
-                <input type="number" id="size" name="size" min="0.1" max="15" step="0.1" placeholder = "2.5" class = "form-control" required>
-            </div>
-            <div><h1></h1></div>
-            <div><h1></h1></div>
-            <div class="row">
-                <span>
-                    <label for="color" class="col-form-label">Ball color: </label>
-                    <input type = "color" name = "color" value = "#000000" id = "choosecolor" style="width: 50%;" class = "form-control form-control-color" required>
-                </span>
-            </div>
-            <div><h1></h1></div>
-            <div><h1></h1></div>
-            <button type="submit" class = "btn btn-primary" id="submitbtn">Create</button>
-        </form>
-    </div>
-</div>
+    <canvas></canvas>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
