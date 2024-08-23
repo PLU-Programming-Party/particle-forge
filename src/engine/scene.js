@@ -1,24 +1,54 @@
-export class SceneManager {
-    constructor() {
-        this.geometries = [];
+export class SceneObject {
+    constructor(objectName, objectGeometry, objectMaterial, objectTransform, objectID) {
+        this.objectName = objectName;
+        this.objectGeometry = objectGeometry;
+        this.objectMaterial = objectMaterial;
+        this.objectTransform = objectTransform;
+        this.objectID = objectID;
+        this.children = [];
+        this.parent = null;
     }
 
-    addGeometry(geometry) {
-        this.geometries.push(geometry);
+    setGeometry(geometry) {
+        this.objectGeometry = geometry;
     }
 
-    draw(device, pass) {
-        for (const geometry of this.geometries) {
-            // Create a vertex buffer
-            const vertexBuffer = device.createBuffer({
-                size: geometry.vertices.byteLength,
-                usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-            });
+    setMaterial(material) {
+        this.objectMaterial = material; 
+        this.children.push(child);
+        child.parent = this;
+    }
 
-            const indexBuffer = device.createBuffer({
-                size: geometry.indices.byteLength,
-                usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-            });
+    update(deltaTime) {
+        throw new Error('SceneObject error -> update function not implemented');
+    }
+}    
+
+export class Scene {
+    constructor(engine) {
+        this.engine = engine;
+        this.objects = [];
+    }
+
+    addObject(newSceneObject) {
+        this.objects.push(newSceneObject);
+    }
+
+    async initialize() {
+        for (let object of this.objects) {
+            await object.initialize(this.engine);
+        }
+    }
+
+    update(deltaTime) {
+        for (let object of this.objects) {
+            object.update(deltaTime);
+        }
+    }
+
+    render() {
+        for (let object of this.objects) {
+            object.render();
         }
     }
 }

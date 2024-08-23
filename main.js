@@ -1,6 +1,6 @@
 import { loadShader } from './src/utility/shaderLoader';
 import { Sphere, Cube, Plane, Cylinder, Cone } from './src/geometry/simple-geometry';
-import { Engine, SceneManager } from './src/engine/engine';
+import { Engine } from './src/engine/engine';
 
 // Create a canvas
 const canvas = document.querySelector('canvas');
