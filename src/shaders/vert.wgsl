@@ -1,7 +1,7 @@
 struct Uniforms {
     projectionMatrix : mat4x4<f32>,
     viewMatrix : mat4x4<f32>,
-    modelMatrices : array<mat4x4<f32>, 100>,
+    modelMatrices : array<mat4x4<f32>, 200>,
 }; 
 
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;

@@ -68,7 +68,7 @@ export class Engine {
 
         // Create uniform buffer
         // Assuming you have a maximum of 100 objects
-        const maxObjects = 100;
+        const maxObjects = 200;
         this.uniformBuffer = this.device.createBuffer({
             size: (2 * 4 * 4 * 4) + (maxObjects * 4 * 4 * 4), // Projection + View + 100 model matrices
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
