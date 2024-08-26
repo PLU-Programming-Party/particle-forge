@@ -47,9 +47,30 @@ export class Engine {
             format: this.canvasFormat
         });
 
+        this.isInitialized = true;
+
+        return this;
+    }
+
+    checkIfInitialized() {
+        if (!this.isInitialized) {
+            this.initialize();
+        }
+    }
+
+    initPipeline(vertexShaderCode, fragmentShaderCode) {
+        // Safety check
+        this.checkIfInitialized();
+
+        // Create shader modules
+        const vertexShaderModule = this.device.createShaderModule({ code: vertexShaderCode });
+        const fragmentShaderModule = this.device.createShaderModule({ code: fragmentShaderCode });
+
         // Create uniform buffer
+        // Assuming you have a maximum of 100 objects
+        const maxObjects = 100;
         this.uniformBuffer = this.device.createBuffer({
-            size: 3 * 4 * 4 * 4, // 3 matrices, each 4x4 floats 
+            size: (2 * 4 * 4 * 4) + (maxObjects * 4 * 4 * 4), // Projection + View + 100 model matrices
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
@@ -74,25 +95,6 @@ export class Engine {
                 }
             }]
         });
-
-        this.isInitialized = true;
-
-        return this;
-    }
-
-    checkIfInitialized() {
-        if (!this.isInitialized) {
-            throw new Error('Engine ERROR -> Engine is not initialized');
-        }
-    }
-
-    initPipeline(vertexShaderCode, fragmentShaderCode) {
-        // Safety check
-        this.checkIfInitialized();
-
-        // Create shader modules
-        const vertexShaderModule = this.device.createShaderModule({ code: vertexShaderCode });
-        const fragmentShaderModule = this.device.createShaderModule({ code: fragmentShaderCode });
 
         // Create pipeline layout
         const pipelineLayout = this.device.createPipelineLayout({
