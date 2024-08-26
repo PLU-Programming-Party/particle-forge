@@ -84,6 +84,10 @@ class Scene {
         mat4.rotate(this.sceneObjects[index].modelMatrix, this.sceneObjects[index].modelMatrix, rotation, [0, 1, 0]);
     }
 
+    scaleSceneObject(index, scale) {
+        mat4.scale(this.sceneObjects[index].modelMatrix, this.sceneObjects[index].modelMatrix, scale);
+    }
+
     getObjectTranslationVector(index) {
         const translation = vec3.create();
         mat4.getTranslation(translation, this.sceneObjects[index].modelMatrix);
@@ -173,7 +177,7 @@ class Scene {
             renderPass.pass.setBindGroup(0, this.engine.uniformBindGroup);
             renderPass.pass.setVertexBuffer(0, geometryBuffers.vertexBuffer);
             renderPass.pass.setIndexBuffer(geometryBuffers.indexBuffer, 'uint16');
-            renderPass.pass.drawIndexed(sceneObject.geometry.indices.length, 1, 0, 0, 0);
+            renderPass.pass.drawIndexed(sceneObject.geometry.indices.length, 1, 0, 0, index);
         });
 
         this.engine.endRenderPass(renderPass);
