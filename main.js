@@ -3,6 +3,8 @@ import { Sphere, Cube, Plane, Cylinder, Cone } from './src/geometry/simple-geome
 import { Engine } from './src/engine/engine';
 import { Camera } from './src/engine/camera';
 import { mat4 } from 'gl-matrix'; // Ensure you have gl-matrix installed
+import { Scene } from './src/engine/scene';
+
 
 // Create a canvas
 const canvas = document.querySelector('canvas');
@@ -33,78 +35,24 @@ const vertexShaderCode = await loadShader('./src/shaders/vert.wgsl');
 const fragmentShaderCode = await loadShader('./src/shaders/frag.wgsl');
 engine.initPipeline(vertexShaderCode, fragmentShaderCode);
 
-// Create buffers for sphere
-const sphere = Sphere(0.5, 32, 32);
-const sphereBuffers = engine.bufferGeometry(sphere);
-
-// Create buffers for cube
-const cube = Cube(1);
-const cubeBuffers = engine.bufferGeometry(cube);
 
 // Set camera position and orientation
-const cameraPosition = [0, 0, 5]; // Position the camera 5 units away from the origin along the z-axis
+const cameraPosition = [0, 0, 20]; // Position the camera 5 units away from the origin along the z-axis
 const lookAtPoint = [0, 0, 0]; // Look at the origin
 const upVector = [0, 1, 0]; // Define the up direction
 camera.viewMatrix = mat4.lookAt(mat4.create(), cameraPosition, lookAtPoint, upVector);
 
+// Create a new scene
+const scene = new Scene(engine);
+
+// Create geometries and add them to the scene
+const mesh = new Sphere(0.5, 32, 32);
+const sphere = scene.createSceneObject(mesh);
+scene.translateSceneObject(sphere, [0, 0, 0]);
+
 // Render
 function render() {
-    const renderPass = engine.startRenderPass();
-
-    // Set camera matrices
-    const projectionMatrix = camera.projectionMatrix;
-    const viewMatrix = camera.viewMatrix;
-
-    // Define model matrices for each object
-    const modelMatrixCube = mat4.create();
-    mat4.translate(modelMatrixCube, modelMatrixCube, [-1.5, 0, 0]); // Move the cube to the left
-
-    const modelMatrixSphere = mat4.create();
-    mat4.translate(modelMatrixSphere, modelMatrixSphere, [1.5, 0, 0]); // Move the sphere to the right
-
-    // Update the uniform buffer with the projection and view matrices
-    engine.device.queue.writeBuffer(
-        engine.uniformBuffer,
-        0,
-        projectionMatrix.buffer,
-        projectionMatrix.byteOffset,
-        projectionMatrix.byteLength
-    );
-    engine.device.queue.writeBuffer(
-        engine.uniformBuffer,
-        64, // Assuming 64 bytes offset for the view matrix
-        viewMatrix.buffer,
-        viewMatrix.byteOffset,
-        viewMatrix.byteLength
-    );
-
-    // Render the cube
-    engine.device.queue.writeBuffer(
-        engine.uniformBuffer,
-        128, // Assuming 128 bytes offset for the model matrix
-        modelMatrixCube.buffer,
-        modelMatrixCube.byteOffset,
-        modelMatrixCube.byteLength
-    );
-    renderPass.pass.setBindGroup(0, engine.uniformBindGroup);
-    renderPass.pass.setVertexBuffer(0, cubeBuffers.vertexBuffer);
-    renderPass.pass.setIndexBuffer(cubeBuffers.indexBuffer, 'uint16');
-    renderPass.pass.drawIndexed(cube.indices.length, 1, 0, 0, 0);
-
-    // Render the sphere
-    engine.device.queue.writeBuffer(
-        engine.uniformBuffer,
-        128, // Assuming 128 bytes offset for the model matrix
-        modelMatrixSphere.buffer,
-        modelMatrixSphere.byteOffset,
-        modelMatrixSphere.byteLength
-    );
-    renderPass.pass.setBindGroup(0, engine.uniformBindGroup);
-    renderPass.pass.setVertexBuffer(0, sphereBuffers.vertexBuffer);
-    renderPass.pass.setIndexBuffer(sphereBuffers.indexBuffer, 'uint16');
-    renderPass.pass.drawIndexed(sphere.indices.length, 1, 0, 0, 0);
-
-    engine.endRenderPass(renderPass);
+    scene.render(camera);
 }
 
 resizeCanvas();

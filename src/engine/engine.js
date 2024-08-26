@@ -1,5 +1,6 @@
 import { mat4 } from 'gl-matrix';
 
+
 export class Engine {
     constructor(canvas) {
         // Needed objects
