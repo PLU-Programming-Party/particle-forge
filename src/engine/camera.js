@@ -12,4 +12,22 @@ export class Camera {
     updateViewMatrix() {
         this.viewMatrix = mat4.lookAt(mat4.create(), this.position, this.target, this.up);
     }
+
+    setTransform(position, target, up) {
+        this.position = position;
+        this.target = target;
+        this.up = up;
+        this.updateViewMatrix();
+    }
+
+    translate(translation) {
+        this.position = vec3.add(this.position, this.position, translation);
+        this.updateViewMatrix();
+    }
+
+    rotate(rotation) {
+        this.target = vec3.transformMat4(this.target, this.target, mat4.fromRotation(mat4.create(), rotation));
+        this.up = vec3.transformMat4(this.up, this.up, mat4.fromRotation(mat4.create(), rotation));
+        this.updateViewMatrix();
+    }
 }
