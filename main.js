@@ -37,7 +37,7 @@ const upVector = [0, 1, 0]; // Define the up direction
 camera.viewMatrix = mat4.lookAt(mat4.create(), cameraPosition, lookAtPoint, upVector);
 
 // Create geometries and add them to the scene
-const numberOfCubes = 100;
+const numberOfCubes = 200;
 for (let i = 0; i < numberOfCubes; i++) {
     const mesh = new Cube(0.5, 0.5, 0.5);
     const cube = scene.createSceneObject(mesh);
@@ -108,7 +108,6 @@ while (true) {
 
         // Check for NaN values
         if (isNaN(translation[0]) || isNaN(translation[1]) || isNaN(translation[2])) {
-            console.error("Translation resulted in NaN values", translation);
             continue;
         } else {
             scene.translateSceneObject(sceneObject, translation);
