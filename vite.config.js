@@ -3,6 +3,7 @@ import topLevelAwait from "vite-plugin-top-level-await";
 
 
 export default defineConfig({
+    base: "/particle-forge/",
     plugins: [
         topLevelAwait({
             promiseExportName: "__tla",

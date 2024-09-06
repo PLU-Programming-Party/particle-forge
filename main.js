@@ -19,7 +19,8 @@ await engine.initialize();
 // Load shaders
 const vertexShaderCode = await loadShader('./src/shaders/vert.wgsl');
 const fragmentShaderCode = await loadShader('./src/shaders/frag.wgsl');
-engine.initPipeline(vertexShaderCode, fragmentShaderCode);
+const computeShaderCode = await loadShader('./src/shaders/particle-sim.wgsl');
+engine.initPipeline(vertexShaderCode, fragmentShaderCode, computeShaderCode);
 
 /***************************************************************************************************************
  * SCENE SETUP
@@ -77,18 +78,24 @@ window.addEventListener('mousemove', (event) => {
 });
 
 function getWorldCoordinates(mousePosition, camera) {
+    // Convert mouse position to NDC
     const ndc = vec3.fromValues(mousePosition.nx, mousePosition.ny, 1.0);
-    const inverseProjectionView = mat4.invert(mat4.create(), camera.projectionMatrix);
+
+    // Combine the projection and view matrices
+    const projectionViewMatrix = mat4.multiply(mat4.create(), camera.projectionMatrix, camera.viewMatrix);
+
+    // Invert the combined matrix
+    const inverseProjectionView = mat4.invert(mat4.create(), projectionViewMatrix);
 
     if (!inverseProjectionView) {
         console.error("Matrix inversion failed");
         return vec3.create(); // Return a zero vector to avoid NaNs
     }
 
+    // Transform NDC to world coordinates
     const worldCoordinates = vec3.transformMat4(vec3.create(), ndc, inverseProjectionView);
     return worldCoordinates;
 }
-
 /***************************************************************************************************************
  * MAIN RENDER LOOP
  ***************************************************************************************************************/
