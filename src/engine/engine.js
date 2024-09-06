@@ -64,6 +64,7 @@ export class Engine {
         // Create shader modules
         const vertexShaderModule = this.device.createShaderModule({ code: vertexShaderCode });
         const fragmentShaderModule = this.device.createShaderModule({ code: fragmentShaderCode });
+        const computeShaderModule = this.device.createShaderModule({ code: computeShaderCode });
 
         // Create uniform buffer
         // Assuming you have a maximum of 100 objects
