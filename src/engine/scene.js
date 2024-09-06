@@ -76,6 +76,7 @@ class Scene {
         mat4.copy(this.sceneObjects[index].modelMatrix, modelMatrix);
     }
 
+    // USER FACING FUNCTIONS
     translateSceneObject(index, translation) {
         mat4.translate(this.sceneObjects[index].modelMatrix, this.sceneObjects[index].modelMatrix, translation);
     }
@@ -87,6 +88,7 @@ class Scene {
     scaleSceneObject(index, scale) {
         mat4.scale(this.sceneObjects[index].modelMatrix, this.sceneObjects[index].modelMatrix, scale);
     }
+    // END USER FACING FUNCTIONS
 
     getObjectTranslationVector(index) {
         const translation = vec3.create();

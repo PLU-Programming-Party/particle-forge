@@ -1,6 +1,5 @@
 import { mat4 } from 'gl-matrix';
 
-
 export class Engine {
     constructor(canvas) {
         // Needed objects
@@ -58,19 +57,20 @@ export class Engine {
         }
     }
 
-    initPipeline(vertexShaderCode, fragmentShaderCode) {
+    initPipeline(vertexShaderCode, fragmentShaderCode, computeShaderCode) {
         // Safety check
         this.checkIfInitialized();
 
         // Create shader modules
         const vertexShaderModule = this.device.createShaderModule({ code: vertexShaderCode });
         const fragmentShaderModule = this.device.createShaderModule({ code: fragmentShaderCode });
+        const computeShaderModule = this.device.createShaderModule({ code: computeShaderCode });
 
         // Create uniform buffer
         // Assuming you have a maximum of 100 objects
         const maxObjects = 200;
         this.uniformBuffer = this.device.createBuffer({
-            size: (2 * 4 * 4 * 4) + (maxObjects * 4 * 4 * 4), // Projection + View + 100 model matrices
+            size: (2 * 4 * 4 * 4) + (maxObjects * 4 * 4 * 4), // Projection + View + some number of model matrices
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
