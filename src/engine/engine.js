@@ -66,21 +66,45 @@ export class Engine {
         const fragmentShaderModule = this.device.createShaderModule({ code: fragmentShaderCode });
         const computeShaderModule = this.device.createShaderModule({ code: computeShaderCode });
 
-        // Create uniform buffer
-        // Assuming you have a maximum of 100 objects
+        // Set the maximum number of objects
         const maxObjects = 200;
+
+        // Create storage buffer for particle state
+        let particleBufferSize = 3 * 4; // Position
+        particleBufferSize += 3 * 4; // Velocity
+        particleBufferSize += 3 * 4; // Acceleration
+        particleBufferSize += 4 * 4; // Rotation (Quaternion)
+        particleBufferSize += 4 * 4; // Color
+        particleBufferSize += 4; // Mass
+        particleBufferSize += 4; // Size
+        particleBufferSize += 4; // Age
+        particleBufferSize += 4; // Max lifetime
+
+        const particleStateBuffer = this.device.createBuffer({
+            size: maxObjects * particleBufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+
+        // Create uniform buffer
         this.uniformBuffer = this.device.createBuffer({
             size: (2 * 4 * 4 * 4) + (maxObjects * 4 * 4 * 4), // Projection + View + some number of model matrices
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
-        // create uniform bind group layout
+        // create bind group layout
         this.uniformBindGroupLayout = this.device.createBindGroupLayout({
             entries: [{
                 binding: 0,
                 visibility: GPUShaderStage.VERTEX,
                 buffer: {
                     type: 'uniform'
+                }
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {
+                    type: 'storage'
                 }
             }]
         });
@@ -92,6 +116,12 @@ export class Engine {
                 binding: 0,
                 resource: {
                     buffer: this.uniformBuffer
+                }
+            },
+            {
+                binding: 1,
+                resource: {
+                    buffer: particleStateBuffer
                 }
             }]
         });
