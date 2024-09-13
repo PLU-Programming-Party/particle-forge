@@ -1,5 +1,6 @@
 import { loadShader } from './src/utility/shaderLoader';
-import { Sphere, Cube, Plane, Cylinder, Cone } from './src/geometry/simple-geometry';
+import { Sphere, Cube, Plane, Cylinder, Cone } from './src/forge/simple-geometry';
+import { Particle, ParticleEnvironment } from './src/forge/particle-system';
 import { Engine } from './src/engine/engine';
 import { Camera } from './src/engine/camera';
 import { mat4, vec3 } from 'gl-matrix'; // Ensure you have gl-matrix installed
@@ -40,13 +41,14 @@ camera.viewMatrix = mat4.lookAt(mat4.create(), cameraPosition, lookAtPoint, upVe
 // Create geometries and add them to the scene
 const numberOfCubes = 200;
 for (let i = 0; i < numberOfCubes; i++) {
-    const mesh = new Cube(0.5, 0.5, 0.5);
+    const mesh = new Sphere(0.1, 6, 6);
     const cube = scene.createSceneObject(mesh);
     sceneObjects.push(cube);
     const randomX = Math.random() * 30 - 15;
     const randomY = Math.random() * 30 - 15;
     const randomZ = Math.random() * 30 - 15;
     scene.translateSceneObject(cube, [randomX, randomY, randomZ]);
+    scene.createParticle(mesh, 0, [randomX, randomY, randomZ]);
 }
 
 /***************************************************************************************************************

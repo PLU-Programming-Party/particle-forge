@@ -1,4 +1,5 @@
 import { mat4 } from 'gl-matrix';
+import { Particle, ParticleEnvironment } from '../forge/particle-system';
 
 export class Engine {
     constructor(canvas) {
@@ -9,7 +10,7 @@ export class Engine {
         this.canvasFormat = null;
 
         // Rendering objects
-        this.pipeline = null;
+        this.renderPipeline = null;
         this.projectionMatrix = mat4.create();
         this.viewMatrix = mat4.create();
         this.modelMatrix = mat4.create();
@@ -22,6 +23,11 @@ export class Engine {
         
         // Configuration
         this.backgroundColor = { r: 0.2, g: 0.2, b: 0.2, a: 1.0 };
+
+        // Particle system
+        this.particleStateBuffers = null;
+        this.environmentBuffer = null;
+        this.computePipeline = null;
 
         // Step counter
         this.step = 0;
@@ -71,35 +77,12 @@ export class Engine {
 
         // Set the maximum number of objects
         const maxObjects = 200;
-        const maxRepulsors = 10;
-        const maxAttractors = 10;
 
         // Create storage buffer for particle state
-        let particleBufferSize = 3 * 4; // Position
-        particleBufferSize += 3 * 4; // Velocity
-        particleBufferSize += 3 * 4; // Acceleration
-        particleBufferSize += 4 * 4; // Rotation (Quaternion)
-        particleBufferSize += 4 * 4; // Color
-        particleBufferSize += 4; // Mass
-        particleBufferSize += 4; // Size
-        particleBufferSize += 4; // Class
-        particleBufferSize += 4; // Age
-        particleBufferSize += 4; // Max lifetime
-        
-        let environmentBufferSize = 3 * 4; // Gravity
-        environmentBufferSize += 3 * 4; // Wind
-        environmentBufferSize += 4; // Number of repulsors
-        environmentBufferSize += 4; // Max repulsors
-        environmentBufferSize += maxRepulsors * 3 * 4; // Repulsors
-        environmentBufferSize += maxRepulsors * 4; // Repulsor strengths
-        environmentBufferSize += 4; // Number of attractors
-        environmentBufferSize += 4; // Max attractors
-        environmentBufferSize += maxAttractors * 3 * 4; // Attractors
-        environmentBufferSize += maxAttractors * 4; // Attractor strengths
-        environmentBufferSize += 3 * 4; // Volume upper bounds
-        environmentBufferSize += 3 * 4; // Volume lower bounds
+        let particleBufferSize = Math.ceil(Object.values(Particle).reduce((size, array) => size + array.byteLength, 0) / 256) * 256; // Align to 256 bytes
+        let environmentBufferSize = Math.ceil(Object.values(ParticleEnvironment).reduce((size, array) => size + array.byteLength, 0) / 256) * 256; // Align to 256 bytes
 
-        const particleStateBuffers = [
+        this.particleStateBuffers = [
             this.device.createBuffer({
                 label: 'Particle State Buffer A',
                 size: maxObjects * particleBufferSize,
@@ -112,7 +95,7 @@ export class Engine {
             })
         ]
 
-        const environmentBuffer = this.device.createBuffer({
+        this.environmentBuffer = this.device.createBuffer({
             size: environmentBufferSize,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
         });
@@ -167,19 +150,19 @@ export class Engine {
             {
                 binding: 1,
                 resource: {
-                    buffer: particleStateBuffers[0]
+                    buffer: this.particleStateBuffers[0]
                 }
             },
             {
                 binding: 2,
                 resource: {
-                    buffer: particleStateBuffers[1]
+                    buffer: this.particleStateBuffers[1]
                 }
             },
             {
                 binding: 3,
                 resource: {
-                    buffer: environmentBuffer
+                    buffer: this.environmentBuffer
                 }
             }]
         }),
@@ -194,19 +177,19 @@ export class Engine {
             {
                 binding: 1,
                 resource: {
-                    buffer: particleStateBuffers[1]
+                    buffer: this.particleStateBuffers[1]
                 }
             },
             {
                 binding: 2,
                 resource: {
-                    buffer: particleStateBuffers[0]
+                    buffer: this.particleStateBuffers[0]
                 }
             },
             {
                 binding: 3,
                 resource: {
-                    buffer: environmentBuffer
+                    buffer: this.environmentBuffer
                 }
             }]
         })];
@@ -214,6 +197,16 @@ export class Engine {
         // Create pipeline layout
         const pipelineLayout = this.device.createPipelineLayout({
             bindGroupLayouts: [this.uniformBindGroupLayout]
+        });
+
+        // Create particle system compute pipeline
+        this.computePipeline = this.device.createComputePipeline({
+            label: 'Particle System Compute Pipeline',
+            layout: pipelineLayout,
+            compute: {
+                module: computeShaderModule,
+                entryPoint: 'main'
+            }
         });
 
         // Create vertex buffer layout
@@ -227,7 +220,7 @@ export class Engine {
         };
 
 
-        this.pipeline = this.device.createRenderPipeline({
+        this.renderPipeline = this.device.createRenderPipeline({
             layout: pipelineLayout,
             vertex: {
                 module: vertexShaderModule,
@@ -268,8 +261,18 @@ export class Engine {
     }
 
     startRenderPass() {
-        this.step++;
         const encoder = this.device.createCommandEncoder();
+
+        const computePass = encoder.beginComputePass();
+
+        computePass.setPipeline(this.computePipeline);
+        computePass.setBindGroup(0, this.uniformBindGroups[this.step % 2]);
+        const workgroupCount = Math.ceil(200 / 64);
+        computePass.dispatchWorkgroups(workgroupCount, workgroupCount);
+        computePass.end();
+
+        this.step++;
+
         const pass = encoder.beginRenderPass({
             colorAttachments: [
                 {
@@ -279,7 +282,7 @@ export class Engine {
                     storeOp: 'store',
                 }]
         });
-        pass.setPipeline(this.pipeline);
+        pass.setPipeline(this.renderPipeline);
         pass.setBindGroup(0, this.uniformBindGroups[this.step % 2]);
         return { encoder, pass };
     }

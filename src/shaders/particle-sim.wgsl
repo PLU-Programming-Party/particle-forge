@@ -26,10 +26,13 @@ struct EnvironmentState {
     lower_bound : vec3<f32>,
 };
 
-@group(0) @binding(1) var<storage> particleStateBufferOut: array<ParticleState, 200>;
+@group(0) @binding(1) var<storage, read_write> particleStateBufferOut: array<ParticleState, 200>;
 @group(0) @binding(2) var<storage> particleStateBufferIn: array<ParticleState, 200>;
 
-@compute @workgroup_size(1)  // 1D workgroup size
-fn main() {
-    
+@compute @workgroup_size(1, 1)  // 1D workgroup size
+fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
+    let index = global_id.x;
+    if(index < 200u) {
+        particleStateBufferOut[index] = particleStateBufferIn[index];
+    }
 }
