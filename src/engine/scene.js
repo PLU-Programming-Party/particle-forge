@@ -1,9 +1,71 @@
 import { mat4, vec3, quat } from 'gl-matrix';
+import { Particle, ParticleEnvironment, serializeArrayOfStructs } from '../forge/particle-system';
 
 class Scene {
     constructor(engine) {
         this.sceneObjects = [];
+        this.particleStates = [];
+        this.particleGeometries = [];
+        this.particleEnvironment = {...ParticleEnvironment};
         this.engine = engine;
+    }
+
+    createParticle(geometry, particle_class, position=[0, 0, 0], velocity=[0, 0, 0], acceleration=[0, 0, 0], rotation=[0, 0, 0, 1], scale=[1, 1, 1], color=[1, 1, 1, 1], mass=1, maxLifetime=-1) {
+        const particle = {...Particle};
+        
+        particle.position = new Float32Array(position);
+        particle.velocity = new Float32Array(velocity);
+        particle.acceleration = new Float32Array(acceleration);
+        particle.rotation = new Float32Array(rotation);
+        particle.scale = new Float32Array(scale);
+        particle.color = new Float32Array(color);
+        particle.mass = new Float32Array([mass]);
+        particle.particle_class = new Float32Array([particle_class]);
+        particle.age = new Float32Array([0]);
+        particle.maxLifetime = new Float32Array([maxLifetime]);
+
+        this.particleStates.push(particle);
+        this.particleGeometries.push(geometry);
+
+        const serializedParticles = serializeArrayOfStructs(this.particleStates, Particle);
+        const serializedEnvironment = serializeArrayOfStructs([this.particleEnvironment], ParticleEnvironment);
+
+        this.engine.device.queue.writeBuffer(
+            this.engine.particleStateBuffers[this.engine.step % 2],
+            0,
+            serializedParticles.buffer,
+            serializedParticles.byteOffset,
+            serializedParticles.byteLength
+        );
+
+        this.engine.device.queue.writeBuffer(
+            this.engine.environmentBuffer,
+            0,
+            serializedEnvironment.buffer,
+            serializedEnvironment.byteOffset,
+            serializedEnvironment.byteLength
+        );
+    }
+
+    setEnvironmentBounds(lowerBounds, upperBounds) {
+        this.particleEnvironment.volumeLowerBounds = new Float32Array(lowerBounds);
+        this.particleEnvironment.volumeUpperBounds = new Float32Array(upperBounds);
+    }
+
+    setEnvironmentAttraction(attractors, attractorStrengths) {
+        this.particleEnvironment.numAttractors = new Float32Array([attractors.length / 3]);
+        this.particleEnvironment.attractors = new Float32Array(attractors);
+        this.particleEnvironment.attractorStrengths = new Float32Array(attractorStrengths);
+    }
+
+    setEnvironmentRepulsion(repulsors, repulsorStrengths) {
+        this.particleEnvironment.numRepulsors = new Float32Array([repulsors.length / 3]);
+        this.particleEnvironment.repulsors = new Float32Array(repulsors);
+        this.particleEnvironment.repulsorStrengths = new Float32Array(repulsorStrengths);
+    }
+
+    setEnvironmentGravity(gravity) {
+        this.particleEnvironment.gravity = new Float32Array([gravity]);
     }
 
     createSceneObject(geometry, modelMatrix=null, parent=null) {
@@ -176,7 +238,6 @@ class Scene {
                 fullModelMatrix.byteLength
             );
 
-            renderPass.pass.setBindGroup(0, this.engine.uniformBindGroup);
             renderPass.pass.setVertexBuffer(0, geometryBuffers.vertexBuffer);
             renderPass.pass.setIndexBuffer(geometryBuffers.indexBuffer, 'uint16');
             renderPass.pass.drawIndexed(sceneObject.geometry.indices.length, 1, 0, 0, index);

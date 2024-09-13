@@ -1,4 +1,5 @@
 import { mat4 } from 'gl-matrix';
+import { Particle, ParticleEnvironment } from '../forge/particle-system';
 
 export class Engine {
     constructor(canvas) {
@@ -9,12 +10,12 @@ export class Engine {
         this.canvasFormat = null;
 
         // Rendering objects
-        this.pipeline = null;
+        this.renderPipeline = null;
         this.projectionMatrix = mat4.create();
         this.viewMatrix = mat4.create();
         this.modelMatrix = mat4.create();
         this.uniformBuffer = null;
-        this.uniformBindGroup = null;
+        this.uniformBindGroups = null;
         this.uniformBindGroupLayout = null;
 
         // Flags
@@ -22,6 +23,14 @@ export class Engine {
         
         // Configuration
         this.backgroundColor = { r: 0.2, g: 0.2, b: 0.2, a: 1.0 };
+
+        // Particle system
+        this.particleStateBuffers = null;
+        this.environmentBuffer = null;
+        this.computePipeline = null;
+
+        // Step counter
+        this.step = 0;
         
     }
 
@@ -66,39 +75,138 @@ export class Engine {
         const fragmentShaderModule = this.device.createShaderModule({ code: fragmentShaderCode });
         const computeShaderModule = this.device.createShaderModule({ code: computeShaderCode });
 
-        // Create uniform buffer
-        // Assuming you have a maximum of 100 objects
+        // Set the maximum number of objects
         const maxObjects = 200;
+
+        // Create storage buffer for particle state
+        let particleBufferSize = Math.ceil(Object.values(Particle).reduce((size, array) => size + array.byteLength, 0) / 256) * 256; // Align to 256 bytes
+        let environmentBufferSize = Math.ceil(Object.values(ParticleEnvironment).reduce((size, array) => size + array.byteLength, 0) / 256) * 256; // Align to 256 bytes
+
+        this.particleStateBuffers = [
+            this.device.createBuffer({
+                label: 'Particle State Buffer A',
+                size: maxObjects * particleBufferSize,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
+            }),
+            this.device.createBuffer({
+                label: 'Particle State Buffer B',
+                size: maxObjects * particleBufferSize,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
+            })
+        ]
+
+        this.environmentBuffer = this.device.createBuffer({
+            size: environmentBufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
+        });
+
+        // Create uniform buffer
         this.uniformBuffer = this.device.createBuffer({
             size: (2 * 4 * 4 * 4) + (maxObjects * 4 * 4 * 4), // Projection + View + some number of model matrices
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
-        // create uniform bind group layout
+        // create bind group layout
         this.uniformBindGroupLayout = this.device.createBindGroupLayout({
             entries: [{
-                binding: 0,
+                binding: 0, // Uniform buffer
                 visibility: GPUShaderStage.VERTEX,
                 buffer: {
                     type: 'uniform'
+                }
+            },
+            {
+                binding: 1, // Particle state input buffer
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {
+                    type: 'storage'
+                }
+            },
+            {
+                binding: 2, // Particle state output buffer
+                visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX,
+                buffer: {
+                    type: 'read-only-storage'
+                }
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX,
+                buffer: {
+                    type: 'read-only-storage'
                 }
             }]
         });
 
         // Create uniform bind group
-        this.uniformBindGroup = this.device.createBindGroup({
+        this.uniformBindGroups = [this.device.createBindGroup({
             layout: this.uniformBindGroupLayout,
             entries: [{
                 binding: 0,
                 resource: {
                     buffer: this.uniformBuffer
                 }
+            },
+            {
+                binding: 1,
+                resource: {
+                    buffer: this.particleStateBuffers[0]
+                }
+            },
+            {
+                binding: 2,
+                resource: {
+                    buffer: this.particleStateBuffers[1]
+                }
+            },
+            {
+                binding: 3,
+                resource: {
+                    buffer: this.environmentBuffer
+                }
             }]
-        });
+        }),
+        this.device.createBindGroup({
+            layout: this.uniformBindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: {
+                    buffer: this.uniformBuffer
+                }
+            },
+            {
+                binding: 1,
+                resource: {
+                    buffer: this.particleStateBuffers[1]
+                }
+            },
+            {
+                binding: 2,
+                resource: {
+                    buffer: this.particleStateBuffers[0]
+                }
+            },
+            {
+                binding: 3,
+                resource: {
+                    buffer: this.environmentBuffer
+                }
+            }]
+        })];
 
         // Create pipeline layout
         const pipelineLayout = this.device.createPipelineLayout({
             bindGroupLayouts: [this.uniformBindGroupLayout]
+        });
+
+        // Create particle system compute pipeline
+        this.computePipeline = this.device.createComputePipeline({
+            label: 'Particle System Compute Pipeline',
+            layout: pipelineLayout,
+            compute: {
+                module: computeShaderModule,
+                entryPoint: 'main'
+            }
         });
 
         // Create vertex buffer layout
@@ -112,7 +220,7 @@ export class Engine {
         };
 
 
-        this.pipeline = this.device.createRenderPipeline({
+        this.renderPipeline = this.device.createRenderPipeline({
             layout: pipelineLayout,
             vertex: {
                 module: vertexShaderModule,
@@ -132,54 +240,6 @@ export class Engine {
         });
 
         return this;
-    }
-
-    updateUniforms() {
-        const uniformData = new Float32Array(3 * 4 * 4);
-        uniformData.set(this.projectionMatrix, 0);
-        uniformData.set(this.viewMatrix, 4 * 4);
-        uniformData.set(this.modelMatrix, 8 * 4);
-        this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
-    }
-
-    createPerspectiveMatrix(fov, aspect, near, far) {
-        const projectionMatrix = mat4.create();
-        mat4.perspective(projectionMatrix, fov, aspect, near, far);
-        return projectionMatrix;
-    }
-
-    createViewMatrix(eye, center, up) {
-        const viewMatrix = mat4.create();
-        mat4.lookAt(viewMatrix, eye, center, up);
-        return viewMatrix;
-    }
-
-    createModelMatrix(translation, rotation, scale) {
-        const translationMatrix = mat4.fromTranslation(mat4.create(), translation);
-        const rotationMatrix = mat4.fromRotation(mat4.create(), rotation);
-        const scaleMatrix = mat4.fromScaling(mat4.create(), scale);
-
-        modelMatrix = mat4.create();
-        mat4.mul(this.modelMatrix, this.modelMatrix, translationMatrix);
-        mat4.mul(this.modelMatrix, this.modelMatrix, rotationMatrix);
-        mat4.mul(this.modelMatrix, this.modelMatrix, scaleMatrix);
-
-        return modelMatrix;
-    }
-
-    resizeCanvas() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.context.configure({
-            device: this.device,
-            format: this.canvasFormat,
-            size: { width: this.canvas.width, height: this.canvas.height }
-        });
-        // Update projection matrix
-        const aspectRatio = this.canvas.width / this.canvas.height;
-        //mat4.perspective(this.projectionMatrix, Math.PI / 4, aspectRatio, 0.1, 100.0);
-        this.perspectiveMatrix = this.createPerspectiveMatrix(Math.PI / 4, aspectRatio, 0.1, 100.0);
-        this.updateUniforms();
     }
 
     createBuffer(data, usage) {
@@ -202,6 +262,17 @@ export class Engine {
 
     startRenderPass() {
         const encoder = this.device.createCommandEncoder();
+
+        const computePass = encoder.beginComputePass();
+
+        computePass.setPipeline(this.computePipeline);
+        computePass.setBindGroup(0, this.uniformBindGroups[this.step % 2]);
+        const workgroupCount = Math.ceil(200 / 64);
+        computePass.dispatchWorkgroups(workgroupCount, workgroupCount);
+        computePass.end();
+
+        this.step++;
+
         const pass = encoder.beginRenderPass({
             colorAttachments: [
                 {
@@ -211,8 +282,8 @@ export class Engine {
                     storeOp: 'store',
                 }]
         });
-        pass.setPipeline(this.pipeline);
-        pass.setBindGroup(0, this.uniformBindGroup);
+        pass.setPipeline(this.renderPipeline);
+        pass.setBindGroup(0, this.uniformBindGroups[this.step % 2]);
         return { encoder, pass };
     }
 
