@@ -176,7 +176,6 @@ class Scene {
                 fullModelMatrix.byteLength
             );
 
-            renderPass.pass.setBindGroup(0, this.engine.uniformBindGroup);
             renderPass.pass.setVertexBuffer(0, geometryBuffers.vertexBuffer);
             renderPass.pass.setIndexBuffer(geometryBuffers.indexBuffer, 'uint16');
             renderPass.pass.drawIndexed(sceneObject.geometry.indices.length, 1, 0, 0, index);

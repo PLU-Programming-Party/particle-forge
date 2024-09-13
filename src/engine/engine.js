@@ -14,7 +14,7 @@ export class Engine {
         this.viewMatrix = mat4.create();
         this.modelMatrix = mat4.create();
         this.uniformBuffer = null;
-        this.uniformBindGroup = null;
+        this.uniformBindGroups = null;
         this.uniformBindGroupLayout = null;
 
         // Flags
@@ -22,6 +22,9 @@ export class Engine {
         
         // Configuration
         this.backgroundColor = { r: 0.2, g: 0.2, b: 0.2, a: 1.0 };
+
+        // Step counter
+        this.step = 0;
         
     }
 
@@ -68,6 +71,8 @@ export class Engine {
 
         // Set the maximum number of objects
         const maxObjects = 200;
+        const maxRepulsors = 10;
+        const maxAttractors = 10;
 
         // Create storage buffer for particle state
         let particleBufferSize = 3 * 4; // Position
@@ -77,12 +82,39 @@ export class Engine {
         particleBufferSize += 4 * 4; // Color
         particleBufferSize += 4; // Mass
         particleBufferSize += 4; // Size
+        particleBufferSize += 4; // Class
         particleBufferSize += 4; // Age
         particleBufferSize += 4; // Max lifetime
+        
+        let environmentBufferSize = 3 * 4; // Gravity
+        environmentBufferSize += 3 * 4; // Wind
+        environmentBufferSize += 4; // Number of repulsors
+        environmentBufferSize += 4; // Max repulsors
+        environmentBufferSize += maxRepulsors * 3 * 4; // Repulsors
+        environmentBufferSize += maxRepulsors * 4; // Repulsor strengths
+        environmentBufferSize += 4; // Number of attractors
+        environmentBufferSize += 4; // Max attractors
+        environmentBufferSize += maxAttractors * 3 * 4; // Attractors
+        environmentBufferSize += maxAttractors * 4; // Attractor strengths
+        environmentBufferSize += 3 * 4; // Volume upper bounds
+        environmentBufferSize += 3 * 4; // Volume lower bounds
 
-        const particleStateBuffer = this.device.createBuffer({
-            size: maxObjects * particleBufferSize,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        const particleStateBuffers = [
+            this.device.createBuffer({
+                label: 'Particle State Buffer A',
+                size: maxObjects * particleBufferSize,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
+            }),
+            this.device.createBuffer({
+                label: 'Particle State Buffer B',
+                size: maxObjects * particleBufferSize,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
+            })
+        ]
+
+        const environmentBuffer = this.device.createBuffer({
+            size: environmentBufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX
         });
 
         // Create uniform buffer
@@ -94,23 +126,37 @@ export class Engine {
         // create bind group layout
         this.uniformBindGroupLayout = this.device.createBindGroupLayout({
             entries: [{
-                binding: 0,
+                binding: 0, // Uniform buffer
                 visibility: GPUShaderStage.VERTEX,
                 buffer: {
                     type: 'uniform'
                 }
             },
             {
-                binding: 1,
+                binding: 1, // Particle state input buffer
                 visibility: GPUShaderStage.COMPUTE,
                 buffer: {
                     type: 'storage'
+                }
+            },
+            {
+                binding: 2, // Particle state output buffer
+                visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX,
+                buffer: {
+                    type: 'read-only-storage'
+                }
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX,
+                buffer: {
+                    type: 'read-only-storage'
                 }
             }]
         });
 
         // Create uniform bind group
-        this.uniformBindGroup = this.device.createBindGroup({
+        this.uniformBindGroups = [this.device.createBindGroup({
             layout: this.uniformBindGroupLayout,
             entries: [{
                 binding: 0,
@@ -121,10 +167,49 @@ export class Engine {
             {
                 binding: 1,
                 resource: {
-                    buffer: particleStateBuffer
+                    buffer: particleStateBuffers[0]
+                }
+            },
+            {
+                binding: 2,
+                resource: {
+                    buffer: particleStateBuffers[1]
+                }
+            },
+            {
+                binding: 3,
+                resource: {
+                    buffer: environmentBuffer
                 }
             }]
-        });
+        }),
+        this.device.createBindGroup({
+            layout: this.uniformBindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: {
+                    buffer: this.uniformBuffer
+                }
+            },
+            {
+                binding: 1,
+                resource: {
+                    buffer: particleStateBuffers[1]
+                }
+            },
+            {
+                binding: 2,
+                resource: {
+                    buffer: particleStateBuffers[0]
+                }
+            },
+            {
+                binding: 3,
+                resource: {
+                    buffer: environmentBuffer
+                }
+            }]
+        })];
 
         // Create pipeline layout
         const pipelineLayout = this.device.createPipelineLayout({
@@ -164,54 +249,6 @@ export class Engine {
         return this;
     }
 
-    updateUniforms() {
-        const uniformData = new Float32Array(3 * 4 * 4);
-        uniformData.set(this.projectionMatrix, 0);
-        uniformData.set(this.viewMatrix, 4 * 4);
-        uniformData.set(this.modelMatrix, 8 * 4);
-        this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
-    }
-
-    createPerspectiveMatrix(fov, aspect, near, far) {
-        const projectionMatrix = mat4.create();
-        mat4.perspective(projectionMatrix, fov, aspect, near, far);
-        return projectionMatrix;
-    }
-
-    createViewMatrix(eye, center, up) {
-        const viewMatrix = mat4.create();
-        mat4.lookAt(viewMatrix, eye, center, up);
-        return viewMatrix;
-    }
-
-    createModelMatrix(translation, rotation, scale) {
-        const translationMatrix = mat4.fromTranslation(mat4.create(), translation);
-        const rotationMatrix = mat4.fromRotation(mat4.create(), rotation);
-        const scaleMatrix = mat4.fromScaling(mat4.create(), scale);
-
-        modelMatrix = mat4.create();
-        mat4.mul(this.modelMatrix, this.modelMatrix, translationMatrix);
-        mat4.mul(this.modelMatrix, this.modelMatrix, rotationMatrix);
-        mat4.mul(this.modelMatrix, this.modelMatrix, scaleMatrix);
-
-        return modelMatrix;
-    }
-
-    resizeCanvas() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.context.configure({
-            device: this.device,
-            format: this.canvasFormat,
-            size: { width: this.canvas.width, height: this.canvas.height }
-        });
-        // Update projection matrix
-        const aspectRatio = this.canvas.width / this.canvas.height;
-        //mat4.perspective(this.projectionMatrix, Math.PI / 4, aspectRatio, 0.1, 100.0);
-        this.perspectiveMatrix = this.createPerspectiveMatrix(Math.PI / 4, aspectRatio, 0.1, 100.0);
-        this.updateUniforms();
-    }
-
     createBuffer(data, usage) {
         const buffer = this.device.createBuffer({
             size: data.byteLength,
@@ -231,6 +268,7 @@ export class Engine {
     }
 
     startRenderPass() {
+        this.step++;
         const encoder = this.device.createCommandEncoder();
         const pass = encoder.beginRenderPass({
             colorAttachments: [
@@ -242,7 +280,7 @@ export class Engine {
                 }]
         });
         pass.setPipeline(this.pipeline);
-        pass.setBindGroup(0, this.uniformBindGroup);
+        pass.setBindGroup(0, this.uniformBindGroups[this.step % 2]);
         return { encoder, pass };
     }
 

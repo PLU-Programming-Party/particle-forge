@@ -4,7 +4,21 @@ struct Uniforms {
     modelMatrices : array<mat4x4<f32>, 200>,
 }; 
 
+struct ParticleState {
+    position : vec3<f32>,
+    velocity : vec3<f32>,
+    acceleration : vec3<f32>,
+    rotation : vec4<f32>,
+    color : vec4<f32>,
+    mass : f32,
+    size : f32,
+    particle_class : u32,
+    age : f32,
+    lifetime : f32,
+};
+
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
+@group(0) @binding(2) var<storage> particleStateBuffer: array<ParticleState, 200>;
 
 struct VertexInput {
     @location(0) position : vec3<f32>,
